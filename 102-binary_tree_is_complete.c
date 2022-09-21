@@ -1,112 +1,131 @@
 #include "binary_trees.h"
 
-/**
- * _pow - raises base to the power of exp
- * @base: base number
- * @exp: power to be raised to of base number
- * Return: math answer
- */
-long int _pow(int base, int exp)
-{
-	int up;
-	long int res;
-
-	res = base;
-	for (up = 0; up < exp; up++)
-		res *= base;
-	return (res);
-}
+levelorder_queue_t *create_node(binary_tree_t *node);
+void free_queue(levelorder_queue_t *head);
+void push(binary_tree_t *node, levelorder_queue_t *head,
+		levelorder_queue_t **tail);
+void pop(levelorder_queue_t **head);
+int binary_tree_is_complete(const binary_tree_t *tree);
 
 /**
- * binary_tree_height - count a height of a binary tree
- * @tree: input entire tree
- * Return: height of a binary tree
- */
-size_t binary_tree_height(const binary_tree_t *tree)
-{
-	size_t h_R = 0, h_L = 0;
-
-	if (!tree)
-		return (0);
-	if (tree->left || tree->right)
-	{
-		h_L = binary_tree_height(tree->left);
-		h_R = binary_tree_height(tree->right);
-		return (1 + (h_L > h_R ? h_L : h_R));
-	}
-	return (0);
-}
-
-/**
- * binary_tree_size - function that measures the size of a binary tree
- * @tree: pointer to the root node of the tree to measure the size
- * Return: the size of the tree
- * If tree is NULL, the function must return 0
- */
-size_t binary_tree_size(const binary_tree_t *tree)
-{
-	size_t num_nodes = 0;
-
-	if (!tree)
-		return (0);
-	if (tree->left != NULL)
-		num_nodes += binary_tree_size(tree->left);
-	if (tree->right != NULL)
-		num_nodes += binary_tree_size(tree->right);
-	return (num_nodes + 1);
-}
-
-/**
- * binary_tree_is_perfect - function that checks if a binary tree is perfect
- * @tree: pointer to root node of the tree to check
- * Return: 1 if tree is perfect,
- * otherwise, function return 0
- */
-int binary_tree_is_perfect(const binary_tree_t *tree)
-{
-	unsigned int height = 0;
-	unsigned int num_nodes = 0;
-
-	if (!tree)
-		return (0);
-	if ((tree->left == NULL) && (tree->right == NULL))
-		return (1);
-	height = binary_tree_height(tree);
-	num_nodes = binary_tree_size(tree);
-	if (num_nodes == _pow(2, height) - 1)
-		return (1);
-	else
-		return (0);
-}
-/**
- * binary_tree_is_complete -  checks if a binary tree is complete
- * @tree: pointer to the root node of the tree to check
+ * create_node - Creates a new levelorder_queue_t node.
+ * @node: The binary tree node for the new node to contain.
  *
- * Return: 1 if complete, 0 otherwise. If tree is NULL, return 0
+ * Return: If an error occurs, NULL.
+ *         Otherwise, a pointer to the new node.
+ */
+levelorder_queue_t *create_node(binary_tree_t *node)
+{
+	levelorder_queue_t *new;
+
+	new = malloc(sizeof(levelorder_queue_t));
+	if (new == NULL)
+		return (NULL);
+
+	new->node = node;
+	new->next = NULL;
+
+	return (new);
+}
+
+/**
+ * free_queue - Frees a levelorder_queue_t queue.
+ * @head: A pointer to the head of the queue.
+ */
+void free_queue(levelorder_queue_t *head)
+{
+	levelorder_queue_t *tmp;
+
+	while (head != NULL)
+	{
+		tmp = head->next;
+		free(head);
+		head = tmp;
+	}
+}
+
+/**
+ * push - Pushes a node to the back of a levelorder_queue_t queue.
+ * @node: The binary tree node to print and push.
+ * @head: A double pointer to the head of the queue.
+ * @tail: A double pointer to the tail of the queue.
+ *
+ * Description: Upon malloc failure, exits with a status code of 1.
+ */
+void push(binary_tree_t *node, levelorder_queue_t *head,
+		levelorder_queue_t **tail)
+{
+	levelorder_queue_t *new;
+
+	new = create_node(node);
+	if (new == NULL)
+	{
+		free_queue(head);
+		exit(1);
+	}
+	(*tail)->next = new;
+	*tail = new;
+}
+
+/**
+ * pop - Pops the head of a levelorder_queue_t queue.
+ * @head: A double pointer to the head of the queue.
+ */
+void pop(levelorder_queue_t **head)
+{
+	levelorder_queue_t *tmp;
+
+	tmp = (*head)->next;
+	free(*head);
+	*head = tmp;
+}
+
+/**
+ * binary_tree_is_complete - Checks if a binary tree is complete.
+ * @tree: A pointer to the root node of the tree to traverse.
+ *
+ * Return: If the tree is NULL or not complete, 0.
+ *         Otherwise, 1.
+ *
+ * Description: Upon malloc failure, exits with a status code of 1.
  */
 int binary_tree_is_complete(const binary_tree_t *tree)
 {
-	size_t l_height, r_height;
-	binary_tree_t *l, *r;
+	levelorder_queue_t *head, *tail;
+	unsigned char flag = 0;
 
 	if (tree == NULL)
 		return (0);
-	if (binary_tree_is_leaf(tree))
-		return (1);
-	l = tree->left;
-	r = tree->right;
-	l_height = binary_tree_height(l);
-	r_height = binary_tree_height(r);
-	if (l_height == r_height)
-	{
-		if (binary_tree_is_perfect(l) && binary_tree_is_complete(r))
-			return (1);
-	}
-	else if (l_height == r_height + 1)
-	{
-		if (binary_tree_is_complete(l) && binary_tree_is_perfect(r))
-			return (1);
-	}
-	return (0);
-}
 
+	head = tail = create_node((binary_tree_t *)tree);
+	if (head == NULL)
+		exit(1);
+
+	while (head != NULL)
+	{
+		if (head->node->left != NULL)
+		{
+			if (flag == 1)
+			{
+				free_queue(head);
+				return (0);
+			}
+			push(head->node->left, head, &tail);
+		}
+		else
+			flag = 1;
+		if (head->node->right != NULL)
+		{
+			if (flag == 1)
+			{
+				free_queue(head);
+				return (0);
+			}
+			push(head->node->right, head, &tail);
+		}
+		else
+			flag = 1;
+		pop(&head);
+	}
+	return (1);
+}
